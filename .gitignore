@@ -23,3 +23,8 @@ runs/
 *.pt
 *.pth
 train.log
+
+# Keep demo images even though data/ is ignored
+!demos/Demo1.png
+!demos/Demo2.png
+!demos/Demo3.png
