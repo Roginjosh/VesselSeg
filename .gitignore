@@ -1,7 +1,25 @@
+# Ignore These Files
 *.png
 *.tif
 *.jpg
 *.tiff
-
-__pycache__/
 *.pyc
+*.pt
+.DS_Store
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+train.log
+
+runs/
+*.pt
+*.pth
+train.log
+runs/
+*.pt
+*.pth
+train.log
