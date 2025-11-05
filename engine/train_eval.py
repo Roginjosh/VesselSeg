@@ -6,9 +6,16 @@ import torch
 from utils.losses import bce_dice
 from utils.metrics import dice_coef, iou_coef
 
-def run_epoch(model, loader, optimizer, device, train: bool = True, amp: bool = True) -> Tuple[float,float,float]:
+def run_epoch(model, loader, optimizer, device, train: bool = True, amp: bool = True) -> Tuple[float, float, float]:
     model.train(train)
-    scaler = torch.amp.GradScaler('cuda', enabled=(amp and torch.cuda.is_available()))
+
+    # AMP/Scaler policy by device
+    use_cuda_amp = amp and (device.type == "cuda")
+    use_autocast = amp and (device.type in {"cuda", "mps"})
+
+    # Use the CUDA amp API for scaler (only on CUDA)
+    scaler = torch.cuda.amp.GradScaler(enabled=use_cuda_amp)
+
     total_loss = total_dice = total_iou = 0.0
     n = 0
 
@@ -17,15 +24,20 @@ def run_epoch(model, loader, optimizer, device, train: bool = True, amp: bool = 
     for imgs, masks in loop:
         imgs, masks = imgs.to(device), masks.to(device)
 
-        with torch.amp.autocast('cuda', enabled=(amp and torch.cuda.is_available())):
+        # autocast works for cuda and (limited) mps; disabled on cpu
+        with torch.autocast(device_type=device.type, enabled=use_autocast):
             logits = model(imgs)
             loss = bce_dice(logits, masks)
 
         if train:
             optimizer.zero_grad(set_to_none=True)
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            if use_cuda_amp:
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                optimizer.step()
 
         with torch.no_grad():
             dice = dice_coef(logits, masks).item()

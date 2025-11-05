@@ -62,8 +62,15 @@ def main(cfg_path: str):
     model = UNet(in_ch=model_c["in_ch"], out_ch=model_c["out_ch"], base=model_c["base"])
 
     train_c = cfg["train"]
-    device = torch.device(train_c["device"] if train_c["device"] == "cuda" and torch.cuda.is_available() else "cpu")
-    model = model.to(device)
+
+
+    device = (
+        torch.device("cuda") if torch.cuda.is_available()
+        else torch.device("mps") if torch.backends.mps.is_available()
+        else torch.device("cpu")
+    )
+    print("Using device:", device)
+    model.to(device)
 
     opt_c = cfg["optim"]
     if opt_c["name"].lower() == "adamw":
