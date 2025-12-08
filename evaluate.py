@@ -84,11 +84,7 @@ def main():
 
         tp = gt & pr          # lesion, predicted lesion
         fp = ~gt & pr         # background, predicted lesion
-        fn = gt & ~pr         # lesion, predicted background
-
-        iou_manual = tp_count / (tp_count + fp_count + fn_count + 1e-6)
-        print(f"Manual IoU: {iou_manual:.6f}")
-            
+        fn = gt & ~pr         # lesion, predicted background            
 
         err_map = np.zeros((IMG_SIZE, IMG_SIZE, 3), dtype=np.float32)
         err_map[tp] = [0.0, 1.0, 0.0]   # green
