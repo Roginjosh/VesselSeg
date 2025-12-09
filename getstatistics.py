@@ -157,5 +157,9 @@ def main():
         print(f"{r['filename']} | IoU={r['iou']:.4f}, Dice={r['dice']:.4f}, Loss={r['loss']:.4f}")
 
 
+
+
+
+
 if __name__ == "__main__":
     main()
