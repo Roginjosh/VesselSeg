@@ -16,7 +16,18 @@ CKPT_PATH = Path("runs/unet/unet_best.pt")
 IMG_SIZE  = 256
 BATCH_SIZE = 8
 THR = 0.5
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+    print("Using CUDA:", torch.cuda.get_device_name(0))
+
+elif torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+    print("Using Apple MPS accelerator")
+
+else:
+    DEVICE = torch.device("cpu")
+    print("Using CPU only")
+
 
 
 # ---------- metric helpers (logits -> scalar) ----------
