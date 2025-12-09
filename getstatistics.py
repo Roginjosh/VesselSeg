@@ -79,6 +79,12 @@ def main():
 
     )
 
+    path_list = list(test_ds.paths)
+    all_records = []
+    global_idx = 0
+
+
+
     # model
     ckpt = torch.load(CKPT_PATH, map_location=DEVICE)
     model = UNet(in_ch=3, out_ch=1, base=64).to(DEVICE)
@@ -95,13 +101,33 @@ def main():
         logits = model(imgs)
 
         loss = bce_dice(logits, masks)
-        all_loss.append(loss.item())
+        loss_val = loss.item()
+        all_loss.append(loss_val)
 
-        iou_batch  = batch_iou_from_logits(logits, masks)
-        dice_batch = batch_dice_from_logits(logits, masks)
+        # per-image metrics as numpy arrays
+        iou_batch  = batch_iou_from_logits(logits, masks).cpu().numpy()   # shape (B,)
+        dice_batch = batch_dice_from_logits(logits, masks).cpu().numpy()  # shape (B,)
 
-        all_iou.extend(iou_batch.cpu().numpy().tolist())
-        all_dice.extend(dice_batch.cpu().numpy().tolist())
+        batch_size = imgs.size(0)
+        batch_paths = path_list[global_idx:global_idx + batch_size]
+
+        for i in range(batch_size):
+            iou_i  = float(iou_batch[i])
+            dice_i = float(dice_batch[i])
+            fname  = batch_paths[i].name  # or str(batch_paths[i]) for full path
+
+            all_iou.append(iou_i)
+            all_dice.append(dice_i)
+
+            all_records.append({
+                "filename": fname,
+                "iou": iou_i,
+                "dice": dice_i,
+                "loss": loss_val,
+            })
+
+        global_idx += batch_size
+        
 
     all_iou  = np.array(all_iou)
     all_dice = np.array(all_dice)
