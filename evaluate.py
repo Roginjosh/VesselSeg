@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from pathlib import Path
-
+import argparse
 from models.unet import UNet
 from utils.losses import bce_dice           # <-- your loss
 from utils.metrics import dice_coef, iou_coef  # <-- your metrics
@@ -38,12 +38,21 @@ def load_image_mask(img_path: Path, mask_dir: Path, img_size: int):
 
     return img_t, img_arr, mask_arr, mask_t, mask_path if mask_path.exists() else None
 
-def main():
-    # pick a random image
+def main(img_name=None):
+    # find all images
     img_files = [p for p in IMAGES_DIR.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".tif", ".tiff"}]
     if not img_files:
         raise FileNotFoundError(f"No images found in {IMAGES_DIR}")
-    img_path = random.choice(img_files)
+
+    # choose specific image OR random
+    if img_name is None:
+        img_path = random.choice(img_files)
+        print(f"[INFO] Using RANDOM image: {img_path.name}")
+    else:
+        img_path = IMAGES_DIR / img_name
+        if not img_path.exists():
+            raise FileNotFoundError(f"Requested image '{img_name}' not found in {IMAGES_DIR}")
+        print(f"[INFO] Using SELECTED image: {img_path.name}")
     print(f"[INFO] Using random image: {img_path.name}")
 
     # ---- model ----
@@ -136,4 +145,7 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--img", type=str, default=None, help="Filename of image, e.g. ISIC_0071478.jpg")
+    args = ap.parse_args()
+    main(args.img)
