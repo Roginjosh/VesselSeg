@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 from pathlib import Path
+from tqdm import tqdm
 
 from models.unet import UNet
 from utils.losses import bce_dice
@@ -77,19 +78,16 @@ def main():
     all_dice = []
     all_loss = []
 
-    for imgs, masks in test_loader:
-        imgs  = imgs.to(DEVICE)           # (B,3,H,W)
-        masks = masks.to(DEVICE)          # (B,1,H,W), float 0/1
+    for imgs, masks in tqdm(test_loader, desc="Evaluating", unit="batch"):
+        imgs  = imgs.to(DEVICE)
+        masks = masks.to(DEVICE)
+        logits = model(imgs)
 
-        logits = model(imgs)              # (B,1,H,W)
-
-        # loss over batch
         loss = bce_dice(logits, masks)
         all_loss.append(loss.item())
 
-        # metrics per image
-        iou_batch  = batch_iou_from_logits(logits, masks)   # (B,)
-        dice_batch = batch_dice_from_logits(logits, masks)  # (B,)
+        iou_batch  = batch_iou_from_logits(logits, masks)
+        dice_batch = batch_dice_from_logits(logits, masks)
 
         all_iou.extend(iou_batch.cpu().numpy().tolist())
         all_dice.extend(dice_batch.cpu().numpy().tolist())
