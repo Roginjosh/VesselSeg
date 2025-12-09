@@ -142,5 +142,20 @@ def main():
           f"min={all_dice.min():.4f}, max={all_dice.max():.4f}")
 
 
+    # ---- 10 worst / 10 best by IoU ----
+    worst_idx = np.argsort(all_iou)[:10]       # 10 smallest IoUs
+    best_idx  = np.argsort(-all_iou)[:10]      # 10 largest IoUs
+
+    print("\n===== WORST 10 (by IoU) =====")
+    for idx in worst_idx:
+        r = all_records[idx]
+        print(f"{r['filename']} | IoU={r['iou']:.4f}, Dice={r['dice']:.4f}, Loss={r['loss']:.4f}")
+
+    print("\n===== BEST 10 (by IoU) =====")
+    for idx in best_idx:
+        r = all_records[idx]
+        print(f"{r['filename']} | IoU={r['iou']:.4f}, Dice={r['dice']:.4f}, Loss={r['loss']:.4f}")
+
+
 if __name__ == "__main__":
     main()
