@@ -1,1 +1,66 @@
+# ===============================
+# Python / Virtual Environments
+# ===============================
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ===============================
+# OS / Editor junk
+# ===============================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vscode/
+.idea/
+
+# ===============================
+# PyTorch / ML outputs
+# ===============================
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# Training artifacts
+runs/
+logs/
+wandb/
+lightning_logs/
+
+# Numpy / Torch temporary files
+*.npy
+*.npz
+
+# ===============================
+# Datasets (DO NOT COMMIT)
+# ===============================
 data/
+datasets/
+raw_data/
+
+# ===============================
+# Images / outputs
+# ===============================
+outputs/
+predictions/
+figures/
+results/
+
+# ===============================
+# Jupyter
+# ===============================
+.ipynb_checkpoints/
+
+# ===============================
+# Misc
+# ===============================
+*.log
+*.tmp
