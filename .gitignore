@@ -53,6 +53,9 @@ outputs/
 predictions/
 figures/
 results/
+demo/
+*.png
+*.csv
 
 # ===============================
 # Jupyter
