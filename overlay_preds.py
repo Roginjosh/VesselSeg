@@ -6,6 +6,16 @@ import matplotlib.pyplot as plt
 from dataset import ISICKeySegDataset
 from unet import UNet
 
+
+import re
+
+ISIC_RE = re.compile(r"(ISIC_\d{7})", re.IGNORECASE)
+
+def extract_isic_from_path(path):
+    m = ISIC_RE.search(path.name)
+    return m.group(1).upper() if m else path.stem
+
+
 def to_display_img(x_chw: torch.Tensor) -> np.ndarray:
     mean = torch.tensor([0.485, 0.456, 0.406], device=x_chw.device)[:, None, None]
     std  = torch.tensor([0.229, 0.224, 0.225], device=x_chw.device)[:, None, None]
@@ -60,6 +70,13 @@ def main():
     model.eval()
 
     x, y = ds[args.idx]
+    # Get ISIC code from dataset pairing
+    if hasattr(ds, "pairs"):
+        img_path, _ = ds.pairs[args.idx]
+        isic_code = extract_isic_from_path(img_path)
+    else:
+        isic_code = f"idx_{args.idx}"
+
     img = to_display_img(x)
     gt  = y[0].cpu().numpy().astype(np.uint8)
 
@@ -80,7 +97,7 @@ def main():
 
     # --- Panel 0: original image ---
     axes[0].imshow(img)
-    axes[0].set_title("Image")
+    axes[0].set_title(isic_code)
     axes[0].axis("off")
 
     # --- Threshold panels ---
@@ -115,7 +132,7 @@ def main():
     for j in range(n + 1, 6):
         axes[j].axis("off")
 
-    out_path = f"demo/overlay_idx_{args.idx}.png"
+    out_path = f"demo/prediction_overlay_{isic_code}.png"
     plt.savefig(out_path, dpi=200, bbox_inches="tight")
     print(f"Saved to {out_path}")
 
