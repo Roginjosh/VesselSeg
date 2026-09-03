@@ -1,3 +1,0 @@
-Pixelwise AUC (GLOBAL / micro)
-ROC AUC: 0.78178344
-PR AUC: 0.49483254

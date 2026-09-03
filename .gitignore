@@ -42,7 +42,8 @@ lightning_logs/
 # ===============================
 # Datasets (DO NOT COMMIT)
 # ===============================
-data/
+data/imgs/
+data/masks/
 datasets/
 raw_data/
 
@@ -56,6 +57,9 @@ results/
 demo/
 *.png
 *.csv
+
+# Keep the verified dataset index
+!data/dataset.csv
 
 # ===============================
 # Jupyter
