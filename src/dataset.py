@@ -83,13 +83,14 @@ class VesselSegDataset(Dataset):
     def __len__(self):
         return len(self.df)
 
-    def _resolve_path(self, path_value: str) -> Path:
-        path = Path(path_value)
+def _resolve_path(self, path_value: str) -> Path:
+    normalized = str(path_value).replace("\\", "/")
+    path = Path(normalized)
 
-        if path.is_absolute():
-            return path
+    if path.is_absolute():
+        return path
 
-        return self.project_root / path
+    return self.project_root / path
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
