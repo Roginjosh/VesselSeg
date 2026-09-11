@@ -15,11 +15,19 @@ class VesselSegDataset(Dataset):
     """
     Segmentation dataset backed by a verified CSV.
 
-    Expected CSV columns:
-        id
+    Required CSV columns:
+        sample_id
         image_path
         mask_path
-        match_type
+
+    Additional columns such as:
+        split
+        diagnosis
+        isic_id
+        annotator
+        source
+
+    are allowed and ignored by this Dataset class.
 
     image_path and mask_path are interpreted relative to project_root
     unless they are already absolute paths.
@@ -49,7 +57,7 @@ class VesselSegDataset(Dataset):
         self.df = pd.read_csv(self.csv_path)
 
         required_columns = {
-            "id",
+            "sample_id",
             "image_path",
             "mask_path",
         }
@@ -100,12 +108,14 @@ class VesselSegDataset(Dataset):
 
         if not img_path.exists():
             raise FileNotFoundError(
-                f"Image not found for sample {row['id']}: {img_path}"
+                f"Image not found for sample "
+                f"{row['sample_id']}: {img_path}"
             )
 
         if not mask_path.exists():
             raise FileNotFoundError(
-                f"Mask not found for sample {row['id']}: {mask_path}"
+                f"Mask not found for sample "
+                f"{row['sample_id']}: {mask_path}"
             )
 
         img = Image.open(img_path).convert("RGB")

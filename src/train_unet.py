@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pandas as pd
 import torch
 from tqdm.auto import tqdm
 from torch.utils.data import DataLoader, Subset
@@ -11,16 +12,19 @@ from src.losses import DiceLoss, dice_iou
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATASET_CSV = PROJECT_ROOT / "data" / "dataset.csv"
+
+# Permanent leakage-safe split file
+DATASET_CSV = PROJECT_ROOT / "data" / "dataset_with_split.csv"
+
 MODEL_DIR = PROJECT_ROOT / "models"
 
 SEED = 42
 IMG_SIZE = 256
 BATCH_SIZE = 8
 EPOCHS = 30
-VAL_FRAC = 0.20
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
+POS_WEIGHT = 1.0
 
 
 def train_one_epoch(
@@ -127,6 +131,10 @@ def eval_one_epoch(
 def main():
     torch.manual_seed(SEED)
 
+    # ---------------------------------------------------------
+    # Device
+    # ---------------------------------------------------------
+
     if torch.cuda.is_available():
         device = torch.device("cuda")
     elif torch.backends.mps.is_available():
@@ -136,10 +144,54 @@ def main():
 
     print(f"Device: {device}")
 
+    # ---------------------------------------------------------
+    # Read the permanent split assignments
+    # ---------------------------------------------------------
+
+    split_df = pd.read_csv(
+        DATASET_CSV,
+        dtype=str,
+    ).fillna("")
+
+    if "split" not in split_df.columns:
+        raise RuntimeError(
+            f"{DATASET_CSV} does not contain a 'split' column."
+        )
+
+    valid_splits = {"train", "val", "test"}
+
+    unknown_splits = set(split_df["split"].unique()) - valid_splits
+
+    if unknown_splits:
+        raise RuntimeError(
+            f"Unknown split values found: {unknown_splits}"
+        )
+
+    train_indices = split_df.index[
+        split_df["split"] == "train"
+    ].tolist()
+
+    val_indices = split_df.index[
+        split_df["split"] == "val"
+    ].tolist()
+
+    test_indices = split_df.index[
+        split_df["split"] == "test"
+    ].tolist()
+
+    # ---------------------------------------------------------
+    # Create two versions of the dataset.
     #
-    # Create two versions of the same verified dataset.
-    # Training gets augmentation; validation does not.
+    # Training:
+    #   augmentation ON
     #
+    # Validation:
+    #   augmentation OFF
+    #
+    # Both read the exact same CSV so their row indices match
+    # the permanent split assignments.
+    # ---------------------------------------------------------
+
     train_full = VesselSegDataset(
         csv_path=DATASET_CSV,
         img_size=IMG_SIZE,
@@ -154,22 +206,15 @@ def main():
         project_root=PROJECT_ROOT,
     )
 
-    #
-    # Generate one reproducible set of indices.
-    #
-    n_total = len(train_full)
-    n_val = int(n_total * VAL_FRAC)
-    n_train = n_total - n_val
+    # Sanity check
+    if len(train_full) != len(split_df):
+        raise RuntimeError(
+            "Dataset length does not match split CSV length."
+        )
 
-    generator = torch.Generator().manual_seed(SEED)
-
-    indices = torch.randperm(
-        n_total,
-        generator=generator,
-    ).tolist()
-
-    train_indices = indices[:n_train]
-    val_indices = indices[n_train:]
+    # ---------------------------------------------------------
+    # Use the permanent split assignments
+    # ---------------------------------------------------------
 
     train_ds = Subset(
         train_full,
@@ -181,9 +226,24 @@ def main():
         val_indices,
     )
 
-    print(f"Total samples: {n_total}")
-    print(f"Training samples: {len(train_ds)}")
+    print()
+    print(f"Total samples:      {len(split_df)}")
+    print(f"Training samples:   {len(train_ds)}")
     print(f"Validation samples: {len(val_ds)}")
+    print(f"Test samples:       {len(test_indices)}")
+    print()
+    print("Test set is reserved and will NOT be used during training.")
+
+    # Expected with your current split:
+    #
+    # Total: 1912
+    # Train: 1534
+    # Val:    187
+    # Test:   191
+
+    # ---------------------------------------------------------
+    # DataLoaders
+    # ---------------------------------------------------------
 
     pin_memory = device.type == "cuda"
 
@@ -203,20 +263,41 @@ def main():
         pin_memory=pin_memory,
     )
 
+    # ---------------------------------------------------------
+    # Model
+    # ---------------------------------------------------------
+
     model = UNet(
         in_channels=3,
         out_channels=1,
         base=64,
     ).to(device)
 
-    bce = torch.nn.BCEWithLogitsLoss()
+    # ---------------------------------------------------------
+    # Loss
+    # ---------------------------------------------------------
+
+    bce = torch.nn.BCEWithLogitsLoss(
+        pos_weight=torch.tensor(
+            [POS_WEIGHT],
+            device=device,
+        )
+    )
     dice = DiceLoss()
+
+    # ---------------------------------------------------------
+    # Optimizer
+    # ---------------------------------------------------------
 
     opt = AdamW(
         model.parameters(),
         lr=LEARNING_RATE,
         weight_decay=WEIGHT_DECAY,
     )
+
+    # ---------------------------------------------------------
+    # Model output directory
+    # ---------------------------------------------------------
 
     MODEL_DIR.mkdir(
         parents=True,
@@ -227,7 +308,12 @@ def main():
 
     best_dice = -1.0
 
+    # ---------------------------------------------------------
+    # Training loop
+    # ---------------------------------------------------------
+
     for epoch in range(1, EPOCHS + 1):
+
         train_loss = train_one_epoch(
             model,
             train_loader,
@@ -257,6 +343,12 @@ def main():
             f"iou {val_iou:.4f}"
         )
 
+        # -----------------------------------------------------
+        # Save according to VALIDATION Dice only.
+        #
+        # The test set is never consulted here.
+        # -----------------------------------------------------
+
         if val_dice > best_dice:
             best_dice = val_dice
 
@@ -274,6 +366,11 @@ def main():
     print("Training complete.")
     print(f"Best validation Dice: {best_dice:.4f}")
     print(f"Best model: {best_model_path}")
+    print()
+    print(
+        "The test set has not been evaluated. "
+        "Use it only for final evaluation."
+    )
 
 
 if __name__ == "__main__":
