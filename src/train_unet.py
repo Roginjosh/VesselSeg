@@ -24,7 +24,7 @@ BATCH_SIZE = 8
 EPOCHS = 30
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
-POS_WEIGHT = 1.0
+POS_WEIGHT = 3.0
 
 
 def train_one_epoch(
