@@ -1,0 +1,5 @@
+ISIC ID: ISIC_0032395
+Sample ID: ISIC_0032395
+Threshold: 0.5
+Dice: 0.575019
+IoU: 0.403527

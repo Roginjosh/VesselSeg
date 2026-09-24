@@ -60,6 +60,7 @@ demo/
 
 # Keep the verified dataset index
 !data/dataset.csv
+!data/dataset_with_split.csv
 
 # ===============================
 # Jupyter

@@ -1,0 +1,5 @@
+ISIC ID: ISIC_0031168
+Sample ID: ISIC_0031168_ok
+Threshold: 0.5
+Dice: 0.542894
+IoU: 0.372584
